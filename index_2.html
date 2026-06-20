@@ -1,0 +1,788 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sentinel | BSA/AML Transaction Monitoring</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F1EBDF; --paper-2:#FBF7EF; --paper-3:#FCFAF5; --sidebar:#EAE2D2;
+  --ink:#201C16; --ink-2:#594F42; --ink-3:#8B826F; --ink-4:#A89D86;
+  --line:#DCD2BF; --line-2:#C9BCA3;
+  --critical:#8C2B20; --critical-bg:#F3E1DC;
+  --high:#B0512A; --high-bg:#F4E5D9;
+  --medium:#A97E1C; --medium-bg:#F2E9D2;
+  --low:#647149; --low-bg:#E8E9DA;
+  --info:#2F5750; --info-bg:#E1E9E5;
+  --accent:#2F5750; --accent-2:#3C6B62;
+  --r:6px; --shadow:0 1px 2px rgba(40,33,20,.05),0 8px 28px rgba(40,33,20,.07);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--paper);color:var(--ink);font-family:"Inter Tight",system-ui,sans-serif;font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+::selection{background:#dfae6a55}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
+
+.shell{display:flex;min-height:100vh}
+.sidebar{width:248px;flex:0 0 248px;background:var(--sidebar);border-right:1px solid var(--line-2);position:sticky;top:0;height:100vh;display:flex;flex-direction:column;padding:26px 20px 18px}
+.brand{display:flex;flex-direction:column;margin-bottom:30px}
+.brand-mark{font-family:"Fraunces",serif;font-weight:600;font-size:26px;letter-spacing:-.01em;line-height:1;display:flex;align-items:center;gap:9px}
+.brand-dot{width:9px;height:9px;border-radius:50%;background:var(--critical);box-shadow:0 0 0 4px var(--critical-bg)}
+.brand-sub{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-3);margin-top:9px;border-top:1px dashed var(--line-2);padding-top:8px}
+.nav{display:flex;flex-direction:column;gap:1px;margin-top:2px}
+.nav button{all:unset;cursor:pointer;display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:var(--r);font-size:14px;font-weight:500;color:var(--ink-2);transition:background .12s,color .12s}
+.nav button .ic{width:17px;height:17px;flex:0 0 17px;color:var(--ink-3);stroke-width:1.7}
+.nav button:hover{background:#ffffff66;color:var(--ink)}
+.nav button.on{background:var(--ink);color:var(--paper-2)}
+.nav button.on .ic{color:var(--paper-2)}
+.nav .count{margin-left:auto;font-family:"JetBrains Mono",monospace;font-size:11px;background:#ffffff8c;color:var(--ink-2);padding:1px 7px;border-radius:20px;border:1px solid var(--line-2)}
+.nav button.on .count{background:#ffffff22;color:var(--paper-2);border-color:#ffffff33}
+.side-foot{margin-top:auto;display:flex;flex-direction:column;gap:12px;padding-top:16px}
+.synthbadge{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.04em;color:var(--ink-2);background:var(--medium-bg);border:1px solid #d9c79b;border-radius:var(--r);padding:8px 10px;line-height:1.5}
+.synthbadge b{color:var(--medium);font-weight:600;display:block;letter-spacing:.1em;margin-bottom:2px}
+.builtby{font-size:12px;color:var(--ink-3);line-height:1.5}
+.builtby b{color:var(--ink-2);font-weight:600}
+.builtby a{font-weight:600}
+
+.main{flex:1;min-width:0;display:flex;flex-direction:column}
+.topbar{position:sticky;top:0;z-index:30;background:rgba(241,235,223,.86);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);padding:15px 34px;display:flex;align-items:baseline;gap:16px}
+.topbar h1{font-family:"Fraunces",serif;font-weight:600;font-size:24px;letter-spacing:-.01em;margin:0}
+.topbar .ctx{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--ink-3);letter-spacing:.04em}
+.topbar .spacer{flex:1}
+.topbar .inst{font-size:12.5px;color:var(--ink-2);text-align:right;line-height:1.35}
+.topbar .inst b{font-weight:600;color:var(--ink)}
+.menu-btn{display:none}
+.content{padding:30px 34px 70px;max-width:1180px;width:100%}
+.view{display:none}
+.view.on{display:block;animation:fade .28s ease}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+.kicker{font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-3);margin:0 0 12px}
+.sec-h{font-family:"Fraunces",serif;font-size:19px;font-weight:600;margin:34px 0 14px;letter-spacing:-.01em}
+.sec-h.first{margin-top:4px}
+.lead{color:var(--ink-2);max-width:66ch;margin:0 0 14px}
+
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:14px;margin-bottom:8px}
+.kpi{background:var(--paper-2);border:1px solid var(--line);border-radius:10px;padding:16px 16px 14px}
+.kpi .lab{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+.kpi .val{font-family:"Fraunces",serif;font-size:32px;font-weight:600;line-height:1.05;margin-top:9px;letter-spacing:-.02em}
+.kpi .sub{font-size:11.5px;color:var(--ink-3);margin-top:4px}
+.kpi.flag .val{color:var(--critical)}
+
+.chart-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin:18px 0 8px}
+.card{background:var(--paper-2);border:1px solid var(--line);border-radius:10px;padding:16px 18px}
+.card h3{font-family:"Inter Tight",sans-serif;font-size:13px;font-weight:600;margin:0 0 2px;color:var(--ink)}
+.card .h-sub{font-size:11px;color:var(--ink-3);margin-bottom:12px}
+.chart-wrap{position:relative;height:206px}
+
+.tablewrap{background:var(--paper-2);border:1px solid var(--line);border-radius:10px;overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+thead th{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3);text-align:left;padding:12px 16px;border-bottom:1px solid var(--line);font-weight:500;white-space:nowrap;user-select:none}
+thead th.sortable{cursor:pointer}
+thead th.sortable:hover{color:var(--ink)}
+thead th .arr{font-size:9px;margin-left:3px}
+tbody td{padding:13px 16px;border-bottom:1px solid var(--line);font-size:13.5px;vertical-align:middle}
+tbody tr:last-child td{border-bottom:none}
+tbody tr.clickable{cursor:pointer;transition:background .1s}
+tbody tr.clickable:hover{background:#fff8ec}
+.mono{font-family:"JetBrains Mono",monospace}
+.amt{font-family:"JetBrains Mono",monospace;font-variant-numeric:tabular-nums;white-space:nowrap}
+.subtle{color:var(--ink-3);font-size:12px}
+.cust-cell{font-weight:500}
+.cust-cell .acct{display:block;font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--ink-3);font-weight:400;margin-top:1px}
+.ty-cell{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.plusbadge{font-family:"JetBrains Mono",monospace;font-size:10px;color:var(--ink-2);background:#fff;border:1px solid var(--line-2);border-radius:20px;padding:0 6px;line-height:16px}
+.empty{padding:40px 16px;text-align:center;color:var(--ink-3);font-size:13.5px}
+
+.tag{display:inline-flex;align-items:center;gap:5px;font-family:"JetBrains Mono",monospace;font-size:10.5px;font-weight:500;letter-spacing:.02em;padding:3px 9px;border-radius:20px;white-space:nowrap;text-transform:uppercase}
+.tag::before{content:"";width:6px;height:6px;border-radius:50%}
+.sev-Critical{background:var(--critical-bg);color:var(--critical)}.sev-Critical::before{background:var(--critical)}
+.sev-High{background:var(--high-bg);color:var(--high)}.sev-High::before{background:var(--high)}
+.sev-Medium{background:var(--medium-bg);color:var(--medium)}.sev-Medium::before{background:var(--medium)}
+.sev-Low{background:var(--low-bg);color:var(--low)}.sev-Low::before{background:var(--low)}
+.st{display:inline-flex;align-items:center;font-size:11.5px;font-weight:500;color:var(--ink-2);white-space:nowrap}
+.st .dot{width:7px;height:7px;border-radius:50%;margin-right:7px;background:var(--ink-3);flex:0 0 7px}
+.st.review .dot{background:var(--medium)}
+.st.escalated .dot{background:var(--high)}
+.st.filed .dot{background:var(--critical)}
+.st.cleared .dot{background:var(--low)}
+.risk{font-family:"JetBrains Mono",monospace;font-size:10.5px;font-weight:500;padding:2px 8px;border-radius:4px;text-transform:uppercase;letter-spacing:.03em}
+.risk-High{background:var(--high-bg);color:var(--high)}
+.risk-Medium{background:var(--medium-bg);color:var(--medium)}
+.risk-Low{background:var(--low-bg);color:var(--low)}
+.pep{font-family:"JetBrains Mono",monospace;font-size:9.5px;font-weight:600;letter-spacing:.05em;color:var(--info);background:var(--info-bg);border:1px solid #bcd2cb;padding:1px 6px;border-radius:4px}
+.dash{color:var(--ink-4)}
+
+.filterbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:16px}
+.filterbar select,.filterbar input{font-family:"Inter Tight",sans-serif;font-size:13px;color:var(--ink);background:var(--paper-2);border:1px solid var(--line-2);border-radius:var(--r);padding:8px 11px;outline:none}
+.filterbar input{min-width:200px}
+.filterbar select:focus,.filterbar input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--info-bg)}
+.filterbar .res{margin-left:auto;font-family:"JetBrains Mono",monospace;font-size:11.5px;color:var(--ink-3)}
+
+.scrim{position:fixed;inset:0;background:rgba(33,28,22,.34);backdrop-filter:blur(1.5px);opacity:0;pointer-events:none;transition:opacity .25s;z-index:80}
+.scrim.on{opacity:1;pointer-events:auto}
+.drawer{position:fixed;top:0;right:0;height:100vh;width:min(560px,100%);background:var(--paper-3);border-left:1px solid var(--line-2);box-shadow:-18px 0 50px rgba(40,33,20,.16);transform:translateX(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);z-index:90;display:flex;flex-direction:column}
+.drawer.on{transform:none}
+.dr-head{padding:22px 26px 18px;border-bottom:1px solid var(--line);background:var(--paper-3)}
+.dr-head .row1{display:flex;align-items:center;gap:10px;margin-bottom:13px}
+.dr-id{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--ink-3);letter-spacing:.04em}
+.dr-close{all:unset;cursor:pointer;margin-left:auto;width:30px;height:30px;display:grid;place-items:center;border-radius:6px;color:var(--ink-3);font-size:18px}
+.dr-close:hover{background:#0000000d;color:var(--ink)}
+.dr-title{font-family:"Fraunces",serif;font-size:23px;font-weight:600;letter-spacing:-.01em;margin:0;line-height:1.12}
+.dr-score{font-family:"JetBrains Mono",monospace;font-size:11.5px;color:var(--ink-2);margin-top:9px}
+.dr-score b{color:var(--ink)}
+.dr-body{padding:22px 26px 34px;overflow-y:auto;flex:1}
+.dr-sec{margin-bottom:24px}
+.dr-sec>.lbl{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);margin-bottom:11px}
+.subject{display:grid;grid-template-columns:1fr 1fr;gap:12px 18px;background:var(--paper-2);border:1px solid var(--line);border-radius:9px;padding:16px 17px}
+.subject .f{display:flex;flex-direction:column;gap:3px;min-width:0}
+.subject .f .k{font-size:9.5px;color:var(--ink-3);font-family:"JetBrains Mono",monospace;letter-spacing:.06em;text-transform:uppercase}
+.subject .f .v{font-size:13.5px;font-weight:500;word-break:break-word}
+.subject .f.full{grid-column:1/3}
+.bar-mini{height:6px;background:var(--line);border-radius:4px;overflow:hidden;margin-top:5px}
+.bar-mini>span{display:block;height:100%;background:var(--accent)}
+.narr{background:var(--paper-2);border:1px solid var(--line);border-left:3px solid var(--ink-3);border-radius:0 8px 8px 0;padding:14px 16px;font-size:13.5px;color:var(--ink-2);line-height:1.6}
+.flags{display:flex;flex-wrap:wrap;gap:7px}
+.flagchip{font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--ink-2);background:var(--paper-2);border:1px solid var(--line-2);border-radius:20px;padding:4px 10px}
+.txntable{font-size:12.5px}
+.txntable th{padding:9px 12px}
+.txntable td{padding:9px 12px;font-family:"JetBrains Mono",monospace;font-variant-numeric:tabular-nums}
+.dir-credit{color:var(--low);font-weight:600}
+.dir-debit{color:var(--high);font-weight:600}
+.flagrow{color:var(--critical);font-weight:600}
+
+.actions{display:flex;flex-wrap:wrap;gap:9px}
+.btn{all:unset;cursor:pointer;font-family:"Inter Tight",sans-serif;font-size:13px;font-weight:600;padding:9px 15px;border-radius:var(--r);border:1px solid var(--line-2);color:var(--ink);background:var(--paper-2);transition:.12s;text-align:center}
+.btn:hover{border-color:var(--ink-3);background:#fff}
+.btn-primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn-primary:hover{background:var(--accent-2);border-color:var(--accent-2)}
+.btn-danger{background:var(--critical);color:#fff;border-color:var(--critical)}
+.btn-danger:hover{background:#7a2419}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.reason{margin-top:11px}
+.reason select{width:100%;font-family:"Inter Tight";font-size:13px;padding:9px 11px;border:1px solid var(--line-2);border-radius:var(--r);background:var(--paper-2);color:var(--ink)}
+.disp-note{margin-top:12px;padding:11px 14px;border-radius:8px;font-size:13px;display:flex;gap:9px;align-items:flex-start;line-height:1.5}
+.disp-note .dot{width:8px;height:8px;border-radius:50%;margin-top:5px;flex:0 0 8px}
+.disp-filed{background:var(--critical-bg);color:var(--critical)}.disp-filed .dot{background:var(--critical)}
+.disp-cleared{background:var(--low-bg);color:var(--low)}.disp-cleared .dot{background:var(--low)}
+.disp-escalated{background:var(--high-bg);color:var(--high)}.disp-escalated .dot{background:var(--high)}
+.disp-review{background:var(--medium-bg);color:var(--medium)}.disp-review .dot{background:var(--medium)}
+.sar{margin-top:14px;background:#fff;border:1px solid var(--line-2);border-radius:9px;overflow:hidden}
+.sar-head{display:flex;align-items:center;gap:8px;padding:11px 15px;border-bottom:1px solid var(--line);background:var(--paper-2)}
+.sar-head .t{font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-2)}
+.sar-head .filenote{margin-left:auto;font-family:"JetBrains Mono",monospace;font-size:10px;color:var(--ink-3)}
+.sar-body{padding:15px 17px;font-size:13px;line-height:1.62;color:var(--ink);white-space:pre-wrap;font-family:"Inter Tight",sans-serif;max-height:300px;overflow-y:auto}
+.sar-foot{display:flex;gap:9px;padding:11px 15px;border-top:1px solid var(--line);background:var(--paper-2)}
+.copybtn{all:unset;cursor:pointer;font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--accent);border:1px solid var(--line-2);border-radius:5px;padding:5px 10px}
+.copybtn:hover{background:#fff}
+
+.match-table .scorecell{display:flex;align-items:center;gap:9px;min-width:120px}
+.scorebar{flex:1;height:7px;background:var(--line);border-radius:4px;overflow:hidden;min-width:54px}
+.scorebar>span{display:block;height:100%}
+.scoreval{font-family:"JetBrains Mono",monospace;font-size:12px;font-weight:600;font-variant-numeric:tabular-nums}
+.disp-pill{font-family:"JetBrains Mono",monospace;font-size:10px;font-weight:500;padding:2px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:.03em}
+.disp-confirmed{background:var(--critical-bg);color:var(--critical)}
+.disp-potential{background:var(--medium-bg);color:var(--medium)}
+.disp-false{background:var(--low-bg);color:var(--low)}
+.screen-box{background:var(--paper-2);border:1px solid var(--line);border-radius:10px;padding:18px 20px;margin-bottom:22px}
+.screen-box .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.screen-box input{flex:1;min-width:200px;font-family:"Inter Tight";font-size:14px;padding:10px 13px;border:1px solid var(--line-2);border-radius:var(--r);background:#fff;color:var(--ink);outline:none}
+.screen-box input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--info-bg)}
+.screen-result{margin-top:14px;font-size:13.5px;line-height:1.6}
+.screen-result .hit{display:flex;align-items:center;gap:12px;padding:11px 14px;border:1px solid var(--line);border-radius:8px;background:#fff;margin-top:8px}
+
+.rule-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:14px 0}
+.rule-card{background:var(--paper-2);border:1px solid var(--line);border-radius:10px;padding:17px 19px}
+.rule-card .rc-top{display:flex;align-items:center;gap:9px;margin-bottom:9px}
+.rule-card .rid{font-family:"JetBrains Mono",monospace;font-size:11px;font-weight:600;color:#fff;background:var(--ink);border-radius:5px;padding:2px 8px}
+.rule-card h4{font-family:"Inter Tight";font-size:14.5px;font-weight:600;margin:0}
+.rule-card p{margin:0 0 9px;font-size:13px;color:var(--ink-2);line-height:1.55}
+.rule-card .params{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--ink-3);background:#fff;border:1px solid var(--line);border-radius:6px;padding:8px 11px;line-height:1.6}
+.rule-card .params b{color:var(--ink-2);font-weight:600}
+.lifecycle{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin:14px 0;counter-reset:lc}
+.lc{background:var(--paper-2);border:1px solid var(--line);border-radius:10px;padding:16px 18px;position:relative}
+.lc .num{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--ink-3);letter-spacing:.1em}
+.lc h4{font-family:"Fraunces",serif;font-size:16px;font-weight:600;margin:7px 0 6px}
+.lc p{margin:0;font-size:12.5px;color:var(--ink-2);line-height:1.5}
+.prose{max-width:70ch}
+.prose p{color:var(--ink-2);margin:0 0 14px}
+.callout{background:var(--info-bg);border:1px solid #c2d6cf;border-radius:10px;padding:15px 18px;margin:18px 0;font-size:13.5px;color:#28453f;line-height:1.6}
+.callout b{color:var(--info)}
+
+.about-hero{background:var(--paper-2);border:1px solid var(--line);border-radius:12px;padding:26px 28px;margin-bottom:22px}
+.about-hero .role{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3)}
+.about-hero h2{font-family:"Fraunces",serif;font-size:30px;font-weight:600;margin:8px 0 4px;letter-spacing:-.01em}
+.about-hero .tagline{color:var(--ink-2);font-size:15px;max-width:60ch}
+.about-links{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+.about-links a{font-family:"JetBrains Mono",monospace;font-size:12px;font-weight:500;border:1px solid var(--line-2);border-radius:var(--r);padding:8px 13px;color:var(--accent);background:#fff;text-decoration:none}
+.about-links a:hover{border-color:var(--accent);text-decoration:none}
+.creds{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.cred{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--ink-2);background:var(--paper-2);border:1px solid var(--line);border-radius:20px;padding:5px 12px}
+.demonstrates{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:14px 0}
+.dem{display:flex;gap:11px;background:var(--paper-2);border:1px solid var(--line);border-radius:9px;padding:14px 16px;font-size:13px;color:var(--ink-2);line-height:1.5}
+.dem .b{color:var(--ink);font-weight:600;display:block;margin-bottom:2px;font-size:13.5px}
+.disclaimer{margin-top:24px;border-top:1px dashed var(--line-2);padding-top:18px;font-size:12px;color:var(--ink-3);line-height:1.6;max-width:74ch}
+
+@media(max-width:980px){
+  .chart-row{grid-template-columns:1fr}
+  .rule-grid,.demonstrates{grid-template-columns:1fr}
+}
+@media(max-width:760px){
+  .sidebar{position:fixed;left:0;top:0;z-index:100;transform:translateX(-100%);transition:transform .26s;width:264px;flex-basis:264px}
+  .sidebar.open{transform:none;box-shadow:14px 0 40px rgba(40,33,20,.2)}
+  .menu-btn{display:grid;place-items:center;all:unset;cursor:pointer;width:38px;height:38px;border:1px solid var(--line-2);border-radius:var(--r);color:var(--ink);background:var(--paper-2)}
+  .topbar{padding:13px 18px;gap:12px}
+  .topbar h1{font-size:20px}
+  .topbar .inst{display:none}
+  .content{padding:22px 18px 60px}
+  .subject{grid-template-columns:1fr}
+  .subject .f.full{grid-column:auto}
+  .drawer{width:100%}
+  .nav-scrim{display:none;position:fixed;inset:0;background:rgba(33,28,22,.3);z-index:95}
+  .nav-scrim.on{display:block}
+}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="nav-scrim" id="navScrim"></div>
+<div class="shell">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="brand-mark"><span class="brand-dot"></span>Sentinel</div>
+      <div class="brand-sub">Financial Crimes Operations</div>
+    </div>
+    <nav class="nav" id="nav">
+      <button data-view="overview" class="on"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>Overview</button>
+      <button data-view="alerts"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M10.3 3.8 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.8a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></svg>Alert queue<span class="count" id="navAlertCount">0</span></button>
+      <button data-view="customers"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg>Customers</button>
+      <button data-view="sanctions"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg>Sanctions</button>
+      <button data-view="methodology"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2Z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7Z"/></svg>Methodology</button>
+      <button data-view="about"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>About</button>
+    </nav>
+    <div class="side-foot">
+      <div class="synthbadge"><b>Synthetic data</b>No real persons, accounts, or institutions. All records generated for demonstration.</div>
+      <div class="builtby">Built by <a href="https://joeybridgham.github.io" target="_blank" rel="noopener">Joseph Bridgham</a><br>BSA/AML monitoring concept</div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <button class="menu-btn" id="menuBtn" aria-label="Toggle navigation"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+      <h1 id="viewTitle">Overview</h1>
+      <span class="ctx" id="viewCtx"></span>
+      <span class="spacer"></span>
+      <div class="inst"><b>Atlantic Standard Bank, N.A.</b><br>Monitoring period: 16 Mar to 13 Jun 2026</div>
+    </div>
+    <div class="content">
+
+      <section id="view-overview" class="view on"></section>
+      <section id="view-alerts" class="view"></section>
+      <section id="view-customers" class="view"></section>
+      <section id="view-sanctions" class="view"></section>
+
+      <section id="view-methodology" class="view">
+        <p class="kicker">How Sentinel works</p>
+        <h2 class="sec-h first">A rules-based, explainable monitoring program</h2>
+        <div class="prose">
+          <p class="lead">Sentinel reviews account activity against a defined set of detection rules drawn from recognized money laundering typologies. Every alert is traceable to the specific transactions that triggered it and the rule that fired, so an analyst can understand, document, and defend each decision. This mirrors how a bank BSA/AML program operates in practice, where examiners expect detection logic to be transparent rather than a black box.</p>
+          <p>Findings are consolidated by customer. When an account trips more than one rule, the highest scoring finding becomes the headline typology and the others are recorded as additional indicators on the same alert, which keeps the queue readable and reflects how investigators work a relationship rather than isolated transactions.</p>
+        </div>
+
+        <h3 class="sec-h">Detection rules</h3>
+        <div class="rule-grid">
+          <div class="rule-card"><div class="rc-top"><span class="rid">R1</span><h4>Structuring</h4></div><p>Repeated cash deposits kept below the reporting threshold to avoid a Currency Transaction Report, often split across days or branches.</p><div class="params"><b>Logic:</b> 3 or more cash deposits under <b>$10,000</b> within a 10 day window, or 3 or more in the $8,000 to $9,999 band.</div></div>
+          <div class="rule-card"><div class="rc-top"><span class="rid">R2</span><h4>Threshold avoidance</h4></div><p>Cash or wire activity clustered just beneath the reporting line, extending the structuring concept to non cash channels.</p><div class="params"><b>Logic:</b> 3 or more cash or wire transactions valued <b>$9,000 to $9,999</b> within a 21 day window.</div></div>
+          <div class="rule-card"><div class="rc-top"><span class="rid">R3</span><h4>Round-dollar activity</h4></div><p>A concentration of exact round value transfers, which can indicate movement unrelated to genuine commercial invoicing.</p><div class="params"><b>Logic:</b> 4 or more wires or transfers in exact multiples of $1,000 valued <b>$5,000 or more</b>.</div></div>
+          <div class="rule-card"><div class="rc-top"><span class="rid">R4</span><h4>Rapid pass-through</h4></div><p>Funds received and quickly forwarded onward with little residual balance, a hallmark of funnel accounts used for layering.</p><div class="params"><b>Logic:</b> an incoming transfer above the customer baseline, with <b>80% or more</b> disbursed within 48 hours to 3 or more counterparties.</div></div>
+          <div class="rule-card"><div class="rc-top"><span class="rid">R5</span><h4>Dormant reactivation</h4></div><p>A long quiet account that suddenly moves significant value, a known indicator of account takeover or misuse.</p><div class="params"><b>Logic:</b> inactivity of <b>40 or more days</b> followed by $15,000 or more in activity within two weeks.</div></div>
+          <div class="rule-card"><div class="rc-top"><span class="rid">R6</span><h4>Velocity spike</h4></div><p>A sharp deviation from the customer's established activity profile that warrants review even without another typology present.</p><div class="params"><b>Logic:</b> weekly volume exceeding <b>4 times</b> the expected weekly baseline and $40,000.</div></div>
+          <div class="rule-card"><div class="rc-top"><span class="rid">R7</span><h4>High-risk geography</h4></div><p>Cross border activity with jurisdictions subject to FATF action, which calls for enhanced due diligence.</p><div class="params"><b>Logic:</b> any counterparty in a <b>FATF</b> call for action or increased monitoring jurisdiction; severity scales with value and PEP status.</div></div>
+          <div class="rule-card"><div class="rc-top"><span class="rid">R8</span><h4>Sanctions match</h4></div><p>Counterparty names screened against the sanctions list using fuzzy matching to catch transliterations and aliases.</p><div class="params"><b>Logic:</b> name similarity to an <b>OFAC SDN</b> entry of 85% or higher is a confirmed match; 55 to 84% is a potential match for review.</div></div>
+        </div>
+
+        <h3 class="sec-h">Customer risk rating</h3>
+        <p class="lead">Each customer carries a risk rating that informs alert prioritization. Ratings reflect known KYC factors including customer type, expected versus observed activity, geographic exposure, and politically exposed person status. Higher rated customers receive closer scrutiny and their alerts score higher.</p>
+
+        <h3 class="sec-h">Alert lifecycle</h3>
+        <div class="lifecycle">
+          <div class="lc"><div class="num">01</div><h4>Detection</h4><p>Rules run across the transaction set and emit findings, consolidated into one alert per customer.</p></div>
+          <div class="lc"><div class="num">02</div><h4>Triage</h4><p>The analyst reviews the queue by severity and clears clear false positives with a documented reason.</p></div>
+          <div class="lc"><div class="num">03</div><h4>Investigation</h4><p>Genuine alerts are escalated to a case and the underlying activity and counterparties are examined.</p></div>
+          <div class="lc"><div class="num">04</div><h4>Disposition</h4><p>The case is resolved as unsubstantiated or advanced for reporting, with the rationale recorded.</p></div>
+          <div class="lc"><div class="num">05</div><h4>Reporting</h4><p>Where warranted, a Suspicious Activity Report narrative is drafted and filed with FinCEN.</p></div>
+        </div>
+
+        <div class="callout"><b>On false positives.</b> Most alerts in any real monitoring program are not suspicious. The value of an analyst lies in clearing routine activity quickly and accurately while surfacing the cases that matter. Sentinel deliberately includes benign activity that trips a rule, such as a legitimate cash business or a one off cross border supplier payment, so the false positive workflow is part of the demonstration rather than an afterthought. Production systems typically see far higher alert volumes and clear rates than this curated sample.</div>
+      </section>
+
+      <section id="view-about" class="view">
+        <p class="kicker">About this project</p>
+        <div class="about-hero">
+          <div class="role">Designed and built by</div>
+          <h2>Joseph Bridgham</h2>
+          <p class="tagline">A working demonstration of bank transaction monitoring, built to show financial crimes domain knowledge alongside the data and engineering skills to implement it. MS in Finance and Investment Management, University of North Carolina Wilmington.</p>
+          <div class="creds">
+            <span class="cred">FINRA SIE</span>
+            <span class="cred">CFA Investment Foundations</span>
+            <span class="cred">Bloomberg Market Concepts</span>
+            <span class="cred">Envestnet Wealth Management</span>
+            <span class="cred">Google Data Analytics</span>
+          </div>
+          <div class="about-links">
+            <a href="https://joeybridgham.github.io" target="_blank" rel="noopener">Portfolio site</a>
+            <a href="https://github.com/joeybridgham" target="_blank" rel="noopener">GitHub</a>
+          </div>
+        </div>
+
+        <h3 class="sec-h">What this project demonstrates</h3>
+        <div class="demonstrates">
+          <div class="dem"><div><span class="b">Domain knowledge</span>Money laundering typologies, CTR and SAR obligations, FATF jurisdiction risk, and the BSA framework that governs them.</div></div>
+          <div class="dem"><div><span class="b">Explainable detection</span>Transparent rules over transaction data with traceable triggers, rather than an opaque classifier that an examiner could not interrogate.</div></div>
+          <div class="dem"><div><span class="b">Investigative workflow</span>Alert triage, case escalation, false positive resolution, and structured SAR narrative drafting end to end.</div></div>
+          <div class="dem"><div><span class="b">Implementation</span>Data modeling, a detection engine, fuzzy sanctions matching, and the full interface, all running client side.</div></div>
+        </div>
+
+        <p class="disclaimer">Disclaimer: every record in this application is synthetic and randomly generated for demonstration purposes. No real persons, accounts, transactions, or institutions are represented, and any resemblance to actual entities is coincidental. "Sentinel", "Atlantic Standard Bank, N.A.", and all sanctions list entries are fictional. The sanctions screening logic is illustrative and is not connected to the live OFAC Specially Designated Nationals list. This project is not affiliated with, endorsed by, or representative of any financial institution or government agency, and it is not a compliance tool. It exists solely as a portfolio piece.</p>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer" aria-hidden="true"></aside>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+"use strict";
+/* ============================================================
+   SENTINEL - synthetic data + detection engine (verified)
+   All data fictional. No real persons or PII.
+   ============================================================ */
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+let R=mulberry32(20260613);
+const rnd=()=>R();const ri=(lo,hi)=>Math.floor(rnd()*(hi-lo+1))+lo;const pick=a=>a[Math.floor(rnd()*a.length)];const chance=p=>rnd()<p;const round2=n=>Math.round(n*100)/100;
+function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function money(n){return "$"+Number(n).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});}
+const MON=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const BASE=new Date(Date.UTC(2026,2,16));const WINDOW_DAYS=89;
+function dayToISO(d){return new Date(BASE.getTime()+d*86400000).toISOString().slice(0,10);}
+function dayShort(d){const dt=new Date(BASE.getTime()+d*86400000);return dt.getUTCDate()+" "+MON[dt.getUTCMonth()];}
+
+const FATF_CALL=["Iran","Myanmar","North Korea"];
+const FATF_MONITOR=["Syria","Yemen","Venezuela"];
+const HIGH_RISK=[...FATF_CALL,...FATF_MONITOR];
+const NORMAL_COUNTRIES=["United States","United States","United States","United States","Canada","United Kingdom","Germany","Mexico"];
+const FIRST=["James","Maria","David","Linda","Robert","Patricia","Michael","Jennifer","William","Elizabeth","Richard","Susan","Thomas","Karen","Daniel","Nancy","Priya","Aisha","Chen","Sofia","Omar","Grace","Hassan","Elena"];
+const LAST=["Smith","Johnson","Williams","Brown","Jones","Garcia","Miller","Davis","Rodriguez","Martinez","Hernandez","Lopez","Nair","Okafor","Wang","Petrova","Haddad","Mensah","Reyes","Cole","Bauer","Flores","Ahmed","Novak"];
+const BIZ=["Lakeside Catering","Pinebrook Dental","Summit HVAC Services","Riverside Print Shop","Maplewood Landscaping","Harbor Point Cafe","Greenfield Pharmacy","Stonecreek Auto Repair","Cedar Valley Florist","Brightway Childcare","Iron Oak Construction","Bayshore Yoga Studio","Westgate Hardware","Crescent Bakery","Ironwood Consulting","Tidewater Plumbing"];
+const BIZ_TYPE=["Retail","Professional services","Construction","Hospitality","Healthcare","Personal services","Wholesale trade"];
+const STATES=[["Orlando","FL"],["Tampa","FL"],["Charlotte","NC"],["Atlanta","GA"],["Austin","TX"],["Columbus","OH"],["Phoenix","AZ"],["Denver","CO"],["Raleigh","NC"],["Nashville","TN"]];
+const SDN=[
+  {name:"Sokolov, Viktor Andreevich",aka:["Viktor Sokolov","V. A. Sokolov"],program:"RUSSIA-EO14024",type:"Individual"},
+  {name:"Nasser Petrochemical Trading",aka:["Nasser Petrochem","NPT Holdings"],program:"IRAN",type:"Entity"},
+  {name:"Banco del Sur Internacional",aka:["BdS Internacional"],program:"VENEZUELA",type:"Entity"},
+  {name:"Khalid Mahmoud Rahimi",aka:["K. M. Rahimi","Khalid Rahimi"],program:"SDGT",type:"Individual"},
+  {name:"Pyongyang Star Shipping",aka:["PSS Maritime"],program:"DPRK",type:"Entity"}
+];
+
+let ACCT=4100;function acctNo(){ACCT+=ri(3,11);return "ASB-"+String(ACCT).padStart(7,"0");}
+let customers=[];
+function addCustomer(c){const base={id:"C"+String(customers.length+1).padStart(3,"0"),account:acctNo(),pep:false,country:"United States",notes:"",planted:false};customers.push({...base,...c});return customers[customers.length-1];}
+const BAD={};
+BAD.structurer=addCustomer({name:"Delgado Cash & Carry",type:"Business",businessType:"Retail",city:"Orlando",state:"FL",openDate:"2021-04-09",expectedMonthly:42000,planted:"structuring",notes:"Cash-intensive convenience retailer."});
+BAD.funnel=addCustomer({name:"Northgate Logistics LLC",type:"Business",businessType:"Wholesale trade",city:"Tampa",state:"FL",openDate:"2023-11-02",expectedMonthly:160000,planted:"pass_through",notes:"Freight forwarder handling third-party payments."});
+BAD.dormant=addCustomer({name:"Priya Nair",type:"Personal",city:"Raleigh",state:"NC",openDate:"2019-06-18",expectedMonthly:6500,planted:"dormant",notes:"Salaried individual, historically low activity."});
+BAD.rounder=addCustomer({name:"Coastal Freight Brokers",type:"Business",businessType:"Wholesale trade",city:"Charlotte",state:"NC",openDate:"2022-02-28",expectedMonthly:88000,planted:"round_dollar"});
+BAD.geo=addCustomer({name:"Helios Trading Co",type:"Business",businessType:"Wholesale trade",city:"Austin",state:"TX",openDate:"2020-09-14",expectedMonthly:120000,planted:"geo",notes:"Import/export with international counterparties."});
+BAD.sanction=addCustomer({name:"Atlas Marine Services",type:"Business",businessType:"Wholesale trade",city:"Tampa",state:"FL",openDate:"2018-03-22",expectedMonthly:140000,planted:"sanctions",notes:"Maritime services and chartering."});
+BAD.pep=addCustomer({name:"Hassan Haddad",type:"Personal",city:"Denver",state:"CO",openDate:"2021-08-30",expectedMonthly:30000,planted:"pep_geo",pep:true,notes:"Foreign government official (PEP)."});
+const NORMAL_N=46;
+for(let i=0;i<NORMAL_N;i++){const [city,state]=pick(STATES);
+  if(chance(0.5)) addCustomer({name:pick(FIRST)+" "+pick(LAST),type:"Personal",city,state,expectedMonthly:ri(3000,14000),pep:chance(0.03)});
+  else addCustomer({name:pick(BIZ),type:"Business",businessType:pick(BIZ_TYPE),city,state,expectedMonthly:ri(20000,180000)});
+}
+let TXN=0;let txns=[];
+function tx(o){TXN++;txns.push({id:"TX"+String(TXN).padStart(6,"0"),seq:TXN,...o});}
+const CP_VENDORS=["Sysco Foods","ADP Payroll","State Farm","Verizon Business","Home Depot Pro","Shell Fleet","FedEx Freight","Office Depot","Gusto Inc","City Utilities"];
+const CP_PEOPLE=["Acme Property Mgmt","Sunrise Mortgage","Bright Horizons","Dr. Patel DDS","Greenway Market","Metro Transit","Apex Fitness"];
+function normalActivity(cust){
+  const months=3,perMonth=cust.type==="Business"?ri(14,26):ri(6,12);const avg=cust.expectedMonthly/perMonth;
+  for(let m=0;m<months;m++){
+    if(cust.type==="Personal") tx({accountId:cust.account,customerName:cust.name,day:m*30+ri(1,4),direction:"credit",method:"ACH",amount:round2(cust.expectedMonthly*ri(85,110)/100),counterparty:"Employer Payroll",counterpartyCountry:"United States",channel:"Online"});
+    else tx({accountId:cust.account,customerName:cust.name,day:m*30+ri(2,6),direction:"credit",method:pick(["ACH","Check","Wire"]),amount:round2(cust.expectedMonthly*ri(40,70)/100),counterparty:pick(["Client Receivable","Merchant Settlement","Customer Payment"]),counterpartyCountry:pick(NORMAL_COUNTRIES),channel:"Online"});
+    for(let k=0;k<perMonth;k++){const day=m*30+ri(1,29);const amt=round2(Math.max(20,avg*(0.3+rnd()*1.4)));const debit=chance(0.62);
+      tx({accountId:cust.account,customerName:cust.name,day,direction:debit?"debit":"credit",method:pick(cust.type==="Business"?["ACH","Check","Card","Transfer"]:["Card","ACH","Transfer","Check"]),amount:amt,counterparty:pick(cust.type==="Business"?CP_VENDORS:CP_PEOPLE),counterpartyCountry:pick(NORMAL_COUNTRIES),channel:pick(["Online","Branch","ATM"])});}
+  }
+}
+customers.filter(c=>c.planted!=="dormant").forEach(normalActivity);
+(function(){const c=BAD.structurer;[6,7,9,12,13,16,19,20,23,27,28].forEach(d=>tx({accountId:c.account,customerName:c.name,day:d,direction:"credit",method:"Cash",amount:ri(8200,9750),counterparty:"Cash Deposit",counterpartyCountry:"United States",channel:pick(["Branch - Downtown","Branch - Eastside","Branch - Airport"])}));})();
+(function(){const c=BAD.funnel;[[18,118000],[34,96000],[58,134000]].forEach(function(e){var d=e[0],amt=e[1];
+  tx({accountId:c.account,customerName:c.name,day:d,direction:"credit",method:"Wire",amount:amt,counterparty:"Overseas Buyer Group",counterpartyCountry:pick(["United Kingdom","Germany"]),channel:"Wire room"});
+  const cps=shuffle(["Crest Holdings Ltd","Vanta Imports","Pearl River Co","Linea Trading","Summit Partners SA"]).slice(0,ri(3,4));
+  cps.forEach(cp=>tx({accountId:c.account,customerName:c.name,day:d+ri(0,2),direction:"debit",method:"Wire",amount:round2(amt/cps.length*ri(88,99)/100),counterparty:cp,counterpartyCountry:pick(["Mexico","Canada","United Kingdom","Germany"]),channel:"Wire room"}));});})();
+(function(){const c=BAD.dormant;tx({accountId:c.account,customerName:c.name,day:2,direction:"credit",method:"ACH",amount:6200,counterparty:"Employer Payroll",counterpartyCountry:"United States",channel:"Online"});tx({accountId:c.account,customerName:c.name,day:8,direction:"debit",method:"Card",amount:340,counterparty:"Greenway Market",counterpartyCountry:"United States",channel:"Online"});[70,71,72,73,74].forEach(d=>tx({accountId:c.account,customerName:c.name,day:d,direction:chance(0.5)?"credit":"debit",method:pick(["Wire","Transfer"]),amount:ri(14000,28000),counterparty:pick(["P. Nair Investments","Quick Transfer LLC","Global Remit","J. Okafor"]),counterpartyCountry:pick(["United States","United Kingdom","Mexico"]),channel:"Online"}));})();
+(function(){const c=BAD.rounder;[10,15,22,29,36,44].forEach(d=>tx({accountId:c.account,customerName:c.name,day:d,direction:"debit",method:"Wire",amount:9000,counterparty:pick(["Harbor Equipment Co","Delta Parts Ltd","Western Supply"]),counterpartyCountry:pick(["United States","Mexico"]),channel:"Wire room"}));})();
+(function(){const c=BAD.geo;[14,26,41,53,66].forEach(d=>tx({accountId:c.account,customerName:c.name,day:d,direction:chance(0.6)?"debit":"credit",method:"Wire",amount:ri(35000,90000),counterparty:pick(["Persis Industrial","Levant Trading House","Caspian Freight"]),counterpartyCountry:pick(FATF_CALL),channel:"Wire room"}));})();
+(function(){const c=BAD.sanction;
+  tx({accountId:c.account,customerName:c.name,day:38,direction:"debit",method:"Wire",amount:74500,counterparty:"Viktor A. Sokolov",counterpartyCountry:"United Kingdom",channel:"Wire room"});
+  tx({accountId:c.account,customerName:c.name,day:62,direction:"debit",method:"Wire",amount:51000,counterparty:"Viktor A. Sokolov",counterpartyCountry:"Germany",channel:"Wire room"});
+  const normals=customers.filter(x=>!x.planted);
+  tx({accountId:normals[0].account,customerName:normals[0].name,day:47,direction:"credit",method:"Wire",amount:8200,counterparty:"Maria Sokolova",counterpartyCountry:"United States",channel:"Online"});
+  tx({accountId:normals[1].account,customerName:normals[1].name,day:33,direction:"debit",method:"ACH",amount:4300,counterparty:"Nasser Trading Co",counterpartyCountry:"United States",channel:"Online"});
+  tx({accountId:normals[2].account,customerName:normals[2].name,day:51,direction:"debit",method:"Wire",amount:15600,counterparty:"Banco Sur LLC",counterpartyCountry:"Mexico",channel:"Wire room"});})();
+(function(){const c=BAD.pep;[24,48].forEach(d=>tx({accountId:c.account,customerName:c.name,day:d,direction:"credit",method:"Wire",amount:ri(40000,65000),counterparty:"Ministry Consulting Fund",counterpartyCountry:pick(FATF_MONITOR),channel:"Wire room"}));})();
+(function(){const normals=customers.filter(x=>!x.planted);[[normals[3],4500,"Venezuela",55],[normals[4],3800,"Yemen",61],[normals[5],5200,"Venezuela",70]].forEach(function(e){var c=e[0];tx({accountId:c.account,customerName:c.name,day:e[3],direction:"debit",method:"Wire",amount:e[1],counterparty:"Foreign Supplier",counterpartyCountry:e[2],channel:"Wire room"});});})();
+
+txns.sort((a,b)=>a.day-b.day||a.seq-b.seq);
+const byAccount={};customers.forEach(c=>byAccount[c.account]=[]);txns.forEach(t=>byAccount[t.accountId].push(t));
+function custByAccount(a){return customers.find(c=>c.account===a);}
+function sum(arr){return round2(arr.reduce((s,t)=>s+t.amount,0));}
+function severityFromScore(s){return s>=85?"Critical":s>=68?"High":s>=46?"Medium":"Low";}
+
+let findings=[];function pushF(o){findings.push(o);}
+customers.forEach(function(cust){
+  const t=byAccount[cust.account].slice().sort((a,b)=>a.day-b.day||a.seq-b.seq);if(!t.length)return;const bump=cust.pep?12:0;
+  (function(){const cash=t.filter(x=>x.direction==="credit"&&x.method==="Cash");if(cash.length<2)return;
+    for(let i=0;i<cash.length;i++){const win=cash.filter(x=>x.day>=cash[i].day&&x.day<=cash[i].day+10&&x.amount<10000);const inBand=win.filter(x=>x.amount>=8000);
+      if((win.length>=3&&sum(win)>10000)||inBand.length>=3){const total=sum(win);const score=Math.round(56+Math.min(18,win.length*3)+Math.min(10,total/10000)+bump);
+        pushF({accountId:cust.account,typology:"Structuring",ruleId:"R1",day:Math.max.apply(null,win.map(x=>x.day)),amountInvolved:total,txnIds:win.map(x=>x.id),score,narrative:win.length+" cash deposits totaling "+money(total)+" were conducted within a 10-day period, each below the "+money(10000)+" currency transaction report threshold. Repeated sub-threshold cash deposits across multiple branch locations are consistent with structuring to evade CTR filing requirements."});break;}}})();
+  (function(){const band=t.filter(x=>(x.method==="Cash"||x.method==="Wire")&&x.amount>=9000&&x.amount<10000);if(band.length<3)return;
+    for(let i=0;i<band.length;i++){const win=band.filter(x=>x.day>=band[i].day&&x.day<=band[i].day+21);if(win.length>=3){const total=sum(win);const score=Math.round(46+Math.min(16,win.length*3)+bump);
+      pushF({accountId:cust.account,typology:"Threshold avoidance",ruleId:"R2",day:Math.max.apply(null,win.map(x=>x.day)),amountInvolved:total,txnIds:win.map(x=>x.id),score,narrative:win.length+" transactions were each valued just below the "+money(10000)+" reporting threshold within a three-week window, totaling "+money(total)+". Clustering in the "+money(9000)+" to "+money(9999)+" band suggests deliberate threshold avoidance."});break;}}})();
+  (function(){const r=t.filter(x=>(x.method==="Wire"||x.method==="Transfer")&&x.amount>=5000&&x.amount%1000===0);if(r.length<4)return;const total=sum(r);const score=Math.round(44+Math.min(16,r.length*2)+bump);
+    pushF({accountId:cust.account,typology:"Round-dollar activity",ruleId:"R3",day:Math.max.apply(null,r.map(x=>x.day)),amountInvolved:total,txnIds:r.map(x=>x.id),score,narrative:r.length+" wires were sent in exact round-dollar amounts of "+money(5000)+" or more, totaling "+money(total)+". A concentration of round-value transfers can indicate movement unrelated to genuine commercial invoicing."});})();
+  (function(){const credits=t.filter(x=>x.direction==="credit"&&x.amount>=Math.max(25000,0.4*cust.expectedMonthly));
+    for(const cr of credits){const outs=t.filter(x=>x.direction==="debit"&&x.day>=cr.day&&x.day<=cr.day+2);const distinct=new Set(outs.map(x=>x.counterparty)).size;
+      if(outs.length&&sum(outs)>=0.8*cr.amount&&distinct>=3){const total=round2(cr.amount+sum(outs));const score=Math.round(64+Math.min(16,distinct*4)+bump);
+        pushF({accountId:cust.account,typology:"Rapid pass-through",ruleId:"R4",day:cr.day,amountInvolved:total,txnIds:[cr.id].concat(outs.map(x=>x.id)),score,narrative:"An incoming transfer of "+money(cr.amount)+" was followed within 48 hours by "+outs.length+" outgoing transfers to "+distinct+" distinct counterparties totaling "+money(sum(outs))+", leaving minimal residual balance. Rapid in-and-out movement with little economic purpose is characteristic of a funnel account used for layering."});break;}}})();
+  (function(){const days=[...new Set(t.map(x=>x.day))].sort((a,b)=>a-b);let gap=0,end=null;for(let i=1;i<days.length;i++)if(days[i]-days[i-1]>gap){gap=days[i]-days[i-1];end=days[i];}
+    if(gap>=40&&end!=null){const post=t.filter(x=>x.day>=end&&x.day<=end+14);if(sum(post)>15000){const total=sum(post);const score=Math.round(54+Math.min(16,total/10000)+bump);
+      pushF({accountId:cust.account,typology:"Dormant reactivation",ruleId:"R5",day:end,amountInvolved:total,txnIds:post.map(x=>x.id),score,narrative:"The account showed no activity for approximately "+gap+" days, then conducted "+post.length+" transactions totaling "+money(total)+" within a two-week window. Sudden high-value activity after an extended dormant period is a recognized indicator of account misuse."});}}})();
+  (function(){const wkExp=cust.expectedMonthly/4;for(let w=0;w<=WINDOW_DAYS;w+=7){const wk=t.filter(x=>x.day>=w&&x.day<w+7);if(sum(wk)>wkExp*4&&sum(wk)>40000){const total=sum(wk);const score=Math.round(Math.min(80,44+Math.min(18,total/wkExp)+bump));
+    pushF({accountId:cust.account,typology:"Velocity spike",ruleId:"R6",day:Math.max.apply(null,wk.map(x=>x.day)),amountInvolved:total,txnIds:wk.map(x=>x.id),score,narrative:"Weekly transaction volume reached "+money(total)+" against an expected weekly baseline near "+money(round2(wkExp))+", an increase of more than fourfold. A sharp deviation from the customer's established profile warrants review."});break;}}})();
+  (function(){const hr=t.filter(x=>HIGH_RISK.indexOf(x.counterpartyCountry)>=0);if(!hr.length)return;const total=sum(hr);const call=hr.some(x=>FATF_CALL.indexOf(x.counterpartyCountry)>=0);const score=Math.round((call?66:38)+Math.min(16,hr.length*4)+(cust.pep?14:0));
+    const countries=[...new Set(hr.map(x=>x.counterpartyCountry))].join(", ");
+    pushF({accountId:cust.account,typology:"High-risk geography",ruleId:"R7",day:Math.max.apply(null,hr.map(x=>x.day)),amountInvolved:total,txnIds:hr.map(x=>x.id),score,narrative:hr.length+" transfer"+(hr.length>1?"s":"")+" totaling "+money(total)+" involved counterparties in jurisdictions subject to FATF "+(call?"calls for action":"increased monitoring")+" ("+countries+"). "+(cust.pep?"The customer is a politically exposed person, further elevating risk. ":"")+"Cross-border activity with high-risk jurisdictions requires enhanced due diligence."});})();
+});
+
+function norm(s){return s.toLowerCase().replace(/[^a-z ]/g,"").replace(/\s+/g," ").trim();}
+function lev(a,b){const m=a.length,n=b.length;const d=Array.from({length:m+1},(_,i)=>[i].concat(Array(n).fill(0)));for(let j=0;j<=n;j++)d[0][j]=j;for(let i=1;i<=m;i++)for(let j=1;j<=n;j++)d[i][j]=Math.min(d[i-1][j]+1,d[i][j-1]+1,d[i-1][j-1]+(a[i-1]===b[j-1]?0:1));return d[m][n];}
+function sim(a,b){a=norm(a);b=norm(b);if(!a||!b)return 0;const base=1-lev(a,b)/Math.max(a.length,b.length);const ta=new Set(a.split(" ")),tb=new Set(b.split(" "));let inter=0;ta.forEach(x=>{if(tb.has(x))inter++;});const tok=inter/Math.max(ta.size,tb.size);return Math.max(base,base*0.55+tok*0.45);}
+function bestMatch(name){let best={score:0,entry:null,via:null};SDN.forEach(function(e){[e.name.replace(/,/g,"").split(" ").reverse().join(" "),e.name].concat(e.aka).forEach(function(c){const s=sim(name,c);if(s>best.score)best={score:s,entry:e,via:c};});});return best;}
+let sanctionsHits=[];const seen=new Set();
+txns.forEach(function(t){const k=t.accountId+"|"+t.counterparty;if(seen.has(k))return;seen.add(k);const bm=bestMatch(t.counterparty);
+  if(bm.score>=0.55){const all=txns.filter(x=>x.accountId===t.accountId&&x.counterparty===t.counterparty);
+    sanctionsHits.push({account:t.accountId,customerName:t.customerName,counterparty:t.counterparty,score:Math.round(bm.score*100),sdn:bm.entry.name,program:bm.entry.program,via:bm.via,amount:round2(all.reduce((s,x)=>s+x.amount,0)),count:all.length,day:Math.max.apply(null,all.map(x=>x.day)),disposition:bm.score>=0.85?"Confirmed match":"Potential match"});}});
+sanctionsHits.sort((a,b)=>b.score-a.score);
+const sByAcct={};sanctionsHits.filter(h=>h.score>=85).forEach(function(h){if(!sByAcct[h.account])sByAcct[h.account]=[];sByAcct[h.account].push(h);});
+Object.keys(sByAcct).forEach(function(acct){const hits=sByAcct[acct];const total=round2(hits.reduce((s,x)=>s+x.amount,0));const h=hits[0];
+  pushF({accountId:acct,typology:"Sanctions match",ruleId:"R8",day:Math.max.apply(null,hits.map(x=>x.day)),amountInvolved:total,txnIds:[],score:96,narrative:'Counterparty name "'+h.counterparty+'" returned a '+h.score+'% match to OFAC SDN entry "'+h.sdn+'" (program '+h.program+'). Payments totaling '+money(total)+' were directed to this counterparty. Potential dealings with a sanctioned party require immediate escalation and may necessitate blocking and reporting to OFAC.'});});
+
+let AL=0;let alerts=[];const grouped={};findings.forEach(function(f){(grouped[f.accountId]=grouped[f.accountId]||[]).push(f);});
+Object.keys(grouped).forEach(function(acct){const fs=grouped[acct];fs.sort((a,b)=>b.score-a.score);const p=fs[0];AL++;
+  const others=[...new Set(fs.slice(1).map(f=>f.typology))];
+  alerts.push({id:"AL-2026-"+String(AL).padStart(3,"0"),accountId:acct,customerName:custByAccount(acct).name,typology:p.typology,ruleId:p.ruleId,day:p.day,amountInvolved:p.amountInvolved,txnIds:p.txnIds,score:p.score,severity:severityFromScore(p.score),narrative:p.narrative,otherFlags:others,status:"Open",findings:fs,_sar:null,_sarFiled:false});});
+alerts.sort((a,b)=>b.score-a.score);
+function setBy(name,status){const a=alerts.find(x=>x.customerName===name);if(a)a.status=status;}
+setBy("Atlas Marine Services","SAR filed");setBy("Delgado Cash & Carry","SAR filed");
+setBy("Northgate Logistics LLC","Under review");setBy("Helios Trading Co","Escalated");
+alerts.filter(a=>a.severity==="Low").slice(0,2).forEach(a=>a.status="Cleared (false positive)");
+
+function sarNarrative(alert){const c=custByAccount(alert.accountId);const t=byAccount[alert.accountId].filter(x=>alert.txnIds.indexOf(x.id)>=0);
+  const dates=t.length?(dayToISO(Math.min.apply(null,t.map(x=>x.day)))+" through "+dayToISO(Math.max.apply(null,t.map(x=>x.day)))):dayToISO(alert.day);
+  return ["Atlantic Standard Bank, N.A. is filing this Suspicious Activity Report to document "+alert.typology.toLowerCase()+" identified through transaction monitoring.",
+    "The subject of this report is "+c.name+", a "+c.type.toLowerCase()+" customer (account "+c.account+") located in "+c.city+", "+c.state+", with a relationship opened on "+c.openDate+"."+(c.pep?" The customer is a politically exposed person.":""),
+    "Between "+dates+", the subject conducted activity totaling approximately "+money(alert.amountInvolved)+". "+alert.narrative,
+    "The activity has no apparent lawful or economic purpose consistent with the customer's known profile. The account has been placed under enhanced monitoring pending the outcome of this filing. Supporting transaction records are retained and available upon request."].join("\n\n");}
+
+/* per-customer enrichment */
+customers.forEach(function(c){const t=byAccount[c.account];const vol=sum(t);c.observedMonthly=round2(vol/3);c.totalVolume=vol;
+  const hasCall=t.some(x=>FATF_CALL.indexOf(x.counterpartyCountry)>=0);const hasAlert=alerts.some(a=>a.accountId===c.account);
+  c.riskRating=(c.pep||hasCall)?"High":((c.type==="Business"||hasAlert)?"Medium":"Low");});
+function openAlertsFor(acct){return alerts.filter(a=>a.accountId===acct&&["Open","Under review","Escalated"].indexOf(a.status)>=0).length;}
+
+/* ============================================================
+   APPLICATION
+   ============================================================ */
+const COL={critical:"#8C2B20",high:"#B0512A",medium:"#A97E1C",low:"#647149",info:"#2F5750",ink:"#201C16",ink2:"#594F42",ink3:"#8B826F",line:"#DCD2BF",accent:"#2F5750",paper2:"#FBF7EF"};
+function sevColor(s){return s==="Critical"?COL.critical:s==="High"?COL.high:s==="Medium"?COL.medium:COL.low;}
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+function fmtBig(n){if(n>=1e6)return "$"+(n/1e6).toFixed(2)+"M";if(n>=1e3)return "$"+(n/1e3).toFixed(0)+"K";return "$"+n.toFixed(0);}
+function statusClass(s){return s.startsWith("Cleared")?"cleared":s==="SAR filed"?"filed":s==="Escalated"?"escalated":s==="Under review"?"review":"open";}
+function txnById(acct,id){return byAccount[acct].find(x=>x.id===id);}
+
+Chart.defaults.font.family="Inter Tight, sans-serif";Chart.defaults.font.size=11;Chart.defaults.color=COL.ink3;
+const refLine={id:"refLine",afterDatasetsDraw(chart,a,opts){if(!opts||opts.value==null)return;const y=chart.scales.y;if(!y)return;const yp=y.getPixelForValue(opts.value);const ar=chart.chartArea;const ctx=chart.ctx;ctx.save();ctx.strokeStyle=opts.color||COL.critical;ctx.lineWidth=1.2;ctx.setLineDash([5,4]);ctx.beginPath();ctx.moveTo(ar.left,yp);ctx.lineTo(ar.right,yp);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle=opts.color||COL.critical;ctx.font="600 10px 'JetBrains Mono', monospace";ctx.textAlign="right";ctx.fillText(opts.label||"",ar.right-2,yp-5);ctx.restore();}};
+Chart.register(refLine);
+const charts={};
+function makeChart(id,cfg){if(charts[id]){charts[id].destroy();}const el=document.getElementById(id);if(!el)return;charts[id]=new Chart(el.getContext("2d"),cfg);}
+
+const state={view:"overview",f:{sev:"All",status:"All",ty:"All",q:""},sort:{key:"score",dir:"desc"},drawerId:null};
+const TYPOLOGIES=[...new Set(alerts.map(a=>a.typology).concat(alerts.flatMap(a=>a.otherFlags)))];
+
+/* ---------- nav ---------- */
+const titles={overview:["Overview",""],alerts:["Alert queue","Transaction monitoring"],customers:["Customers","KYC risk register"],sanctions:["Sanctions screening","OFAC SDN matching"],methodology:["Methodology",""],about:["About",""]};
+function setView(v){state.view=v;
+  document.querySelectorAll(".nav button").forEach(b=>b.classList.toggle("on",b.dataset.view===v));
+  document.querySelectorAll(".view").forEach(s=>s.classList.toggle("on",s.id==="view-"+v));
+  document.getElementById("viewTitle").textContent=titles[v][0];
+  document.getElementById("viewCtx").textContent=titles[v][1];
+  if(v==="overview")renderOverview();else if(v==="alerts")renderAlerts();else if(v==="customers")renderCustomers();else if(v==="sanctions")renderSanctions();
+  closeMenu();window.scrollTo(0,0);
+}
+function openMenu(){document.getElementById("sidebar").classList.add("open");document.getElementById("navScrim").classList.add("on");}
+function closeMenu(){document.getElementById("sidebar").classList.remove("open");document.getElementById("navScrim").classList.remove("on");}
+
+/* ---------- overview ---------- */
+function renderOverview(){
+  const openC=alerts.filter(a=>["Open","Under review","Escalated"].indexOf(a.status)>=0).length;
+  const cases=alerts.filter(a=>["Under review","Escalated"].indexOf(a.status)>=0).length;
+  const sars=alerts.filter(a=>a.status==="SAR filed").length;
+  const cleared=alerts.filter(a=>a.status.startsWith("Cleared")).length;
+  const vol=sum(txns);
+  const kpis=[
+    {lab:"Open alerts",val:openC,sub:"awaiting disposition",flag:openC>0},
+    {lab:"Active cases",val:cases,sub:"under review or escalated"},
+    {lab:"SARs filed",val:sars,sub:"reported to FinCEN"},
+    {lab:"Cleared",val:cleared,sub:"false positives"},
+    {lab:"Monitored volume",val:fmtBig(vol),sub:"across "+txns.length.toLocaleString()+" transactions"},
+    {lab:"Customers",val:customers.length,sub:"under monitoring"}
+  ];
+  const sevCounts={Critical:0,High:0,Medium:0,Low:0};alerts.forEach(a=>sevCounts[a.severity]++);
+  const tyCounts={};alerts.forEach(a=>tyCounts[a.typology]=(tyCounts[a.typology]||0)+1);
+  const tyEntries=Object.entries(tyCounts).sort((a,b)=>b[1]-a[1]);
+  const top=alerts.slice().sort((a,b)=>b.score-a.score).slice(0,6);
+
+  document.getElementById("view-overview").innerHTML=
+    '<p class="kicker">Monitoring summary &middot; 90 day window</p>'+
+    '<div class="kpis">'+kpis.map(k=>'<div class="kpi'+(k.flag?" flag":"")+'"><div class="lab">'+k.lab+'</div><div class="val">'+k.val+'</div><div class="sub">'+k.sub+'</div></div>').join("")+'</div>'+
+    '<div class="chart-row">'+
+      '<div class="card"><h3>Alerts by severity</h3><div class="h-sub">Current queue and dispositioned</div><div class="chart-wrap"><canvas id="cSev"></canvas></div></div>'+
+      '<div class="card"><h3>Alerts by typology</h3><div class="h-sub">Headline classification per alert</div><div class="chart-wrap"><canvas id="cTy"></canvas></div></div>'+
+      '<div class="card"><h3>Monitored volume</h3><div class="h-sub">Total transaction value by week</div><div class="chart-wrap"><canvas id="cVol"></canvas></div></div>'+
+    '</div>'+
+    '<h3 class="sec-h">Priority alerts</h3>'+
+    '<div class="tablewrap"><table><thead><tr><th>Alert</th><th>Customer</th><th>Typology</th><th>Amount</th><th>Severity</th><th>Status</th></tr></thead><tbody>'+
+      top.map(a=>rowAlert(a)).join("")+
+    '</tbody></table></div>';
+
+  makeChart("cSev",{type:"doughnut",data:{labels:Object.keys(sevCounts),datasets:[{data:Object.values(sevCounts),backgroundColor:Object.keys(sevCounts).map(sevColor),borderColor:COL.paper2,borderWidth:2}]},options:{cutout:"62%",plugins:{legend:{position:"bottom",labels:{boxWidth:9,boxHeight:9,usePointStyle:true,padding:13,font:{size:11}}}}}});
+  makeChart("cTy",{type:"bar",data:{labels:tyEntries.map(e=>e[0]),datasets:[{data:tyEntries.map(e=>e[1]),backgroundColor:COL.accent,borderRadius:3,barThickness:13}]},options:{indexAxis:"y",plugins:{legend:{display:false}},scales:{x:{ticks:{precision:0,stepSize:1},grid:{color:COL.line}},y:{grid:{display:false},ticks:{font:{size:10.5}}}}}});
+  const weeks=13;const wv=Array.from({length:weeks},(_,w)=>round2(sum(txns.filter(t=>t.day>=w*7&&t.day<w*7+7))));
+  makeChart("cVol",{type:"line",data:{labels:wv.map((_,i)=>dayShort(i*7)),datasets:[{data:wv,borderColor:COL.accent,backgroundColor:"rgba(47,87,80,.10)",fill:true,tension:.32,pointRadius:0,borderWidth:2}]},options:{plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmtBig(c.parsed.y)}}},scales:{x:{grid:{display:false},ticks:{maxRotation:0,autoSkip:true,maxTicksLimit:6,font:{size:10}}},y:{grid:{color:COL.line},ticks:{callback:v=>fmtBig(v),font:{size:10}}}}}});
+}
+function rowAlert(a){
+  return '<tr class="clickable" data-alert="'+a.id+'">'+
+    '<td class="mono subtle">'+a.id+'</td>'+
+    '<td class="cust-cell">'+esc(a.customerName)+'<span class="acct">'+a.accountId+'</span></td>'+
+    '<td><div class="ty-cell">'+a.typology+(a.otherFlags.length?' <span class="plusbadge">+'+a.otherFlags.length+'</span>':'')+'</div></td>'+
+    '<td class="amt">'+money(a.amountInvolved)+'</td>'+
+    '<td><span class="tag sev-'+a.severity+'">'+a.severity+'</span></td>'+
+    '<td><span class="st '+statusClass(a.status)+'"><span class="dot"></span>'+a.status+'</span></td></tr>';
+}
+
+/* ---------- alerts ---------- */
+function renderAlerts(){
+  const opt=(arr,cur)=>arr.map(o=>'<option'+(o===cur?" selected":"")+'>'+o+'</option>').join("");
+  document.getElementById("view-alerts").innerHTML=
+    '<div class="filterbar">'+
+      '<select id="fSev">'+opt(["All","Critical","High","Medium","Low"],state.f.sev)+'</select>'+
+      '<select id="fStatus">'+opt(["All","Open","Under review","Escalated","SAR filed","Cleared (false positive)"],state.f.status)+'</select>'+
+      '<select id="fTy">'+opt(["All"].concat(TYPOLOGIES),state.f.ty)+'</select>'+
+      '<input id="fQ" type="text" placeholder="Search customer, account, or alert ID" value="'+esc(state.f.q)+'">'+
+      '<span class="res" id="fRes"></span>'+
+    '</div>'+
+    '<div class="tablewrap"><table><thead><tr>'+
+      th("id","Alert")+th("day","Date")+'<th>Customer</th>'+th("typology","Typology")+th("amountInvolved","Amount")+th("score","Severity")+'<th>Status</th>'+
+    '</tr></thead><tbody id="alertRows"></tbody></table></div>';
+  document.getElementById("fSev").onchange=e=>{state.f.sev=e.target.value;drawRows();};
+  document.getElementById("fStatus").onchange=e=>{state.f.status=e.target.value;drawRows();};
+  document.getElementById("fTy").onchange=e=>{state.f.ty=e.target.value;drawRows();};
+  document.getElementById("fQ").oninput=e=>{state.f.q=e.target.value;drawRows();};
+  drawRows();
+}
+function th(key,label){const on=state.sort.key===key;const arr=on?(state.sort.dir==="asc"?"&uarr;":"&darr;"):"";return '<th class="sortable" data-sort="'+key+'">'+label+' <span class="arr">'+arr+'</span></th>';}
+function filteredAlerts(){let r=alerts.slice();const f=state.f;
+  if(f.sev!=="All")r=r.filter(a=>a.severity===f.sev);
+  if(f.status!=="All")r=r.filter(a=>a.status===f.status);
+  if(f.ty!=="All")r=r.filter(a=>a.typology===f.ty||a.otherFlags.indexOf(f.ty)>=0);
+  if(f.q.trim()){const q=f.q.toLowerCase();r=r.filter(a=>(a.customerName+" "+a.accountId+" "+a.id).toLowerCase().indexOf(q)>=0);}
+  const sevOrder={Critical:4,High:3,Medium:2,Low:1};const k=state.sort.key,dir=state.sort.dir==="asc"?1:-1;
+  r.sort((a,b)=>{let av=a[k],bv=b[k];if(k==="score"){av=a.score+sevOrder[a.severity]*0.01;bv=b.score+sevOrder[b.severity]*0.01;}if(typeof av==="string"){return av.localeCompare(bv)*dir;}return (av-bv)*dir;});
+  return r;
+}
+function drawRows(){const r=filteredAlerts();document.getElementById("alertRows").innerHTML=r.length?r.map(rowAlert).join(""):'<tr><td colspan="6" class="empty">No alerts match the current filters.</td></tr>';
+  document.getElementById("fRes").textContent="Showing "+r.length+" of "+alerts.length;}
+
+/* ---------- customers ---------- */
+function renderCustomers(){
+  const ranked=customers.slice().sort((a,b)=>{const o={High:3,Medium:2,Low:1};return o[b.riskRating]-o[a.riskRating]||openAlertsFor(b.account)-openAlertsFor(a.account)||b.observedMonthly-a.observedMonthly;});
+  const rc={High:0,Medium:0,Low:0};customers.forEach(c=>rc[c.riskRating]++);
+  document.getElementById("view-customers").innerHTML=
+    '<p class="kicker">'+customers.length+' customers &middot; '+rc.High+' high &middot; '+rc.Medium+' medium &middot; '+rc.Low+' low risk</p>'+
+    '<p class="lead">Customer risk ratings combine type, expected versus observed activity, geographic exposure, and PEP status. Select any customer to review their alerts.</p>'+
+    '<div class="tablewrap"><table><thead><tr><th>Customer</th><th>Type</th><th>Location</th><th>Risk</th><th>Expected / mo</th><th>Observed / mo</th><th>Alerts</th></tr></thead><tbody>'+
+    ranked.map(c=>{const oa=openAlertsFor(c.account);return '<tr class="clickable" data-cust="'+esc(c.name)+'">'+
+      '<td class="cust-cell">'+esc(c.name)+(c.pep?' <span class="pep">PEP</span>':'')+'<span class="acct">'+c.account+'</span></td>'+
+      '<td>'+c.type+(c.businessType?'<br><span class="subtle">'+c.businessType+'</span>':'')+'</td>'+
+      '<td class="subtle">'+c.city+', '+c.state+'</td>'+
+      '<td><span class="risk risk-'+c.riskRating+'">'+c.riskRating+'</span></td>'+
+      '<td class="amt">'+money(c.expectedMonthly)+'</td>'+
+      '<td class="amt">'+money(c.observedMonthly)+'</td>'+
+      '<td>'+(oa?'<span class="mono" style="color:var(--critical);font-weight:600">'+oa+' open</span>':'<span class="subtle mono">none</span>')+'</td></tr>';}).join("")+
+    '</tbody></table></div>';
+}
+
+/* ---------- sanctions ---------- */
+function renderSanctions(){
+  document.getElementById("view-sanctions").innerHTML=
+    '<p class="kicker">OFAC SDN screening &middot; fuzzy name matching</p>'+
+    '<p class="lead">Counterparty names are screened against the sanctions list using approximate matching, which catches transliterations and aliases that an exact match would miss. The trade off is false positives, so each potential match is resolved by an analyst. Names scoring 85% or higher are treated as confirmed matches.</p>'+
+    '<div class="screen-box"><div style="font-family:\'JetBrains Mono\';font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);margin-bottom:10px">Screen a name</div>'+
+      '<div class="row"><input id="screenIn" type="text" placeholder="e.g. Viktor Sokolov, Nasser Trading, John Smith"><button class="btn btn-primary" id="screenBtn">Run screen</button></div>'+
+      '<div class="screen-result" id="screenOut"></div></div>'+
+    '<h3 class="sec-h">Detected potential matches</h3>'+
+    '<div class="tablewrap"><table class="match-table"><thead><tr><th>Counterparty</th><th>Originating customer</th><th>SDN match</th><th>Score</th><th>Resolution</th></tr></thead><tbody id="sancRows"></tbody></table></div>';
+  document.getElementById("screenBtn").onclick=runScreen;
+  document.getElementById("screenIn").addEventListener("keydown",e=>{if(e.key==="Enter")runScreen();});
+  drawSanc();
+}
+function drawSanc(){
+  document.getElementById("sancRows").innerHTML=sanctionsHits.map(function(h,i){
+    const col=h.score>=85?COL.critical:h.score>=70?COL.medium:COL.ink3;
+    const pill=h.disposition==="Confirmed match"?"disp-confirmed":h.disposition==="False positive"?"disp-false":"disp-potential";
+    return '<tr><td class="cust-cell">'+esc(h.counterparty)+'<span class="acct">to '+money(h.amount)+' &middot; '+h.count+' txn</span></td>'+
+      '<td>'+esc(h.customerName)+'<span class="acct">'+h.account+'</span></td>'+
+      '<td class="subtle">'+esc(h.sdn)+'<br><span class="mono" style="font-size:10px">'+h.program+'</span></td>'+
+      '<td><div class="scorecell"><div class="scorebar"><span style="width:'+h.score+'%;background:'+col+'"></span></div><span class="scoreval" style="color:'+col+'">'+h.score+'%</span></div></td>'+
+      '<td><select data-sanc="'+i+'" style="font-family:Inter Tight;font-size:12px;padding:5px 8px;border:1px solid var(--line-2);border-radius:5px;background:var(--paper-2)">'+
+        ["Potential match","Confirmed match","False positive"].map(o=>'<option'+(o===h.disposition?" selected":"")+'>'+o+'</option>').join("")+
+      '</select></td></tr>';
+  }).join("");
+  document.querySelectorAll("[data-sanc]").forEach(s=>s.onchange=e=>{sanctionsHits[+e.target.dataset.sanc].disposition=e.target.value;drawSanc();});
+}
+function runScreen(){const name=document.getElementById("screenIn").value.trim();const out=document.getElementById("screenOut");if(!name){out.innerHTML="";return;}
+  const bm=bestMatch(name);const pct=Math.round(bm.score*100);
+  if(pct<55){out.innerHTML='<div class="hit"><span class="disp-pill disp-false">No match</span><div>No sanctions list entry scored above the 55% review threshold for <b>'+esc(name)+'</b>. Cleared.</div></div>';return;}
+  const col=pct>=85?COL.critical:COL.medium;const cls=pct>=85?"disp-confirmed":"disp-potential";const lab=pct>=85?"Confirmed match":"Potential match";
+  out.innerHTML='<div class="hit"><span class="scoreval" style="color:'+col+';min-width:42px">'+pct+'%</span>'+
+    '<div style="flex:1"><b>'+esc(name)+'</b> matched against <b>'+esc(bm.entry.name)+'</b><br><span class="subtle">Program '+bm.entry.program+' &middot; '+bm.entry.type+' &middot; matched on "'+esc(bm.via)+'"</span></div>'+
+    '<span class="disp-pill '+cls+'">'+lab+'</span></div>';
+}
+
+/* ---------- drawer ---------- */
+function openDrawer(id){const a=alerts.find(x=>x.id===id);if(!a)return;state.drawerId=id;renderDrawer(a);
+  document.getElementById("scrim").classList.add("on");document.getElementById("drawer").classList.add("on");document.getElementById("drawer").setAttribute("aria-hidden","false");}
+function closeDrawer(){state.drawerId=null;document.getElementById("scrim").classList.remove("on");document.getElementById("drawer").classList.remove("on");document.getElementById("drawer").setAttribute("aria-hidden","true");if(charts["drChart"]){charts["drChart"].destroy();delete charts["drChart"];}}
+function trigTxns(a){if(a.txnIds.length)return a.txnIds.map(id=>txnById(a.accountId,id)).filter(Boolean);
+  if(a.ruleId==="R8"){const cps=sanctionsHits.filter(h=>h.account===a.accountId&&h.score>=85).map(h=>h.counterparty);return byAccount[a.accountId].filter(t=>cps.indexOf(t.counterparty)>=0);}return [];}
+function renderDrawer(a){const c=custByAccount(a.accountId);const tt=trigTxns(a);
+  const subj='<div class="subject">'+
+    '<div class="f full"><span class="k">Customer</span><span class="v">'+esc(c.name)+(c.pep?' &nbsp;<span class="pep">PEP</span>':'')+'</span></div>'+
+    '<div class="f"><span class="k">Account</span><span class="v mono">'+c.account+'</span></div>'+
+    '<div class="f"><span class="k">Type</span><span class="v">'+c.type+(c.businessType?" &middot; "+c.businessType:"")+'</span></div>'+
+    '<div class="f"><span class="k">Location</span><span class="v">'+c.city+', '+c.state+'</span></div>'+
+    '<div class="f"><span class="k">Relationship since</span><span class="v mono">'+c.openDate+'</span></div>'+
+    '<div class="f"><span class="k">Risk rating</span><span class="v"><span class="risk risk-'+c.riskRating+'">'+c.riskRating+'</span></span></div>'+
+    '<div class="f"><span class="k">Expected / observed monthly</span><span class="v mono">'+fmtBig(c.expectedMonthly)+' / '+fmtBig(c.observedMonthly)+'</span><div class="bar-mini"><span style="width:'+Math.min(100,Math.round(c.observedMonthly/Math.max(c.expectedMonthly,c.observedMonthly)*100))+'%"></span></div></div>'+
+    '</div>';
+  const flags=a.otherFlags.length?'<div class="dr-sec"><div class="lbl">Additional indicators</div><div class="flags">'+a.otherFlags.map(f=>'<span class="flagchip">'+f+'</span>').join("")+'</div></div>':"";
+  const chartBlock=a.ruleId==="R8"?sanctionsCard(a):'<div class="dr-sec"><div class="lbl">Activity</div><div class="chart-wrap" style="height:200px"><canvas id="drChart"></canvas></div></div>';
+  const rows=tt.slice(0,14).map(function(t){const flagged=a.txnIds.indexOf(t.id)>=0||a.ruleId==="R8";const hr=HIGH_RISK.indexOf(t.counterpartyCountry)>=0;
+    return '<tr'+(flagged?' class="flagrow"':'')+'><td>'+dayShort(t.day)+'</td><td>'+t.method+'</td><td class="dir-'+t.direction+'">'+(t.direction==="credit"?"in":"out")+'</td><td>'+money(t.amount)+'</td><td style="font-family:Inter Tight">'+esc(t.counterparty)+'</td><td style="font-family:Inter Tight'+(hr?";color:var(--critical);font-weight:600":"")+'">'+t.counterpartyCountry+'</td></tr>';}).join("");
+  const txblock=tt.length?'<div class="dr-sec"><div class="lbl">Triggering transactions ('+tt.length+')</div><div class="tablewrap"><table class="txntable"><thead><tr><th>Date</th><th>Method</th><th>Dir</th><th>Amount</th><th>Counterparty</th><th>Country</th></tr></thead><tbody>'+rows+(tt.length>14?'<tr><td colspan="6" class="subtle" style="text-align:center">+ '+(tt.length-14)+' more</td></tr>':"")+'</tbody></table></div></div>':"";
+
+  document.getElementById("drawer").innerHTML=
+    '<div class="dr-head"><div class="row1"><span class="dr-id">'+a.id+'</span><span class="tag sev-'+a.severity+'">'+a.severity+'</span><span class="st '+statusClass(a.status)+'"><span class="dot"></span>'+a.status+'</span><button class="dr-close" id="drClose" aria-label="Close">&times;</button></div>'+
+    '<h2 class="dr-title">'+a.typology+'</h2><div class="dr-score">Risk score <b>'+a.score+'</b> / 100 &middot; rule '+a.ruleId+' &middot; '+esc(c.name)+'</div></div>'+
+    '<div class="dr-body">'+
+      '<div class="dr-sec"><div class="lbl">Subject</div>'+subj+'</div>'+
+      '<div class="dr-sec"><div class="lbl">Why this alert fired</div><div class="narr">'+a.narrative+'</div></div>'+
+      flags+chartBlock+txblock+
+      dispositionBlock(a)+
+    '</div>';
+  document.getElementById("drClose").onclick=closeDrawer;
+  wireDisposition(a);
+  if(a.ruleId!=="R8")buildDrawerChart(a,tt);
+}
+function sanctionsCard(a){const hits=sanctionsHits.filter(h=>h.account===a.accountId&&h.score>=85);const h=hits[0]||{};
+  return '<div class="dr-sec"><div class="lbl">Sanctions match detail</div><div style="background:var(--paper-2);border:1px solid var(--line);border-radius:9px;padding:16px 18px">'+
+    '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><div><div class="subtle" style="font-size:10.5px;font-family:JetBrains Mono;text-transform:uppercase;letter-spacing:.08em">Counterparty</div><div style="font-weight:600;font-size:15px">'+esc(h.counterparty||"")+'</div></div>'+
+    '<div style="font-size:20px;color:var(--ink-3)">&rarr;</div>'+
+    '<div><div class="subtle" style="font-size:10.5px;font-family:JetBrains Mono;text-transform:uppercase;letter-spacing:.08em">OFAC SDN entry</div><div style="font-weight:600;font-size:15px;color:var(--critical)">'+esc(h.sdn||"")+'</div></div></div>'+
+    '<div style="display:flex;gap:10px;align-items:center;margin-top:14px"><div class="scorebar" style="max-width:160px"><span style="width:'+(h.score||0)+'%;background:var(--critical)"></span></div><span class="scoreval" style="color:var(--critical)">'+(h.score||0)+'% match</span><span class="disp-pill disp-confirmed" style="margin-left:auto">Program '+(h.program||"")+'</span></div></div></div>';
+}
+function dispositionBlock(a){
+  const note=a.status==="SAR filed"?'<div class="disp-note disp-filed"><span class="dot"></span><div>A Suspicious Activity Report has been filed for this alert.</div></div>'
+    :a.status.startsWith("Cleared")?'<div class="disp-note disp-cleared"><span class="dot"></span><div>Cleared as a false positive. No further action required.</div></div>'
+    :a.status==="Escalated"?'<div class="disp-note disp-escalated"><span class="dot"></span><div>Escalated to a case and under investigation.</div></div>'
+    :a.status==="Under review"?'<div class="disp-note disp-review"><span class="dot"></span><div>Currently under review by an analyst.</div></div>':"";
+  const terminal=a.status==="SAR filed"||a.status.startsWith("Cleared");
+  const btns=terminal?'<button class="btn" data-act="reopen">Reopen alert</button>'
+    :'<button class="btn btn-danger" data-act="escalate">Escalate to case</button>'+
+     '<button class="btn" data-act="clear">Clear as false positive</button>'+
+     '<button class="btn btn-primary" data-act="sar">Generate SAR narrative</button>';
+  const reason='<div class="reason" id="reasonWrap" style="display:none"><select id="reasonSel"><option value="">Select a reason for clearing</option><option>No suspicious activity identified</option><option>Activity consistent with customer profile</option><option>Legitimate business explanation obtained</option><option>Duplicate or system artifact</option></select><div style="margin-top:9px"><button class="btn btn-danger" data-act="confirmClear">Confirm clearance</button> <button class="btn" data-act="cancelClear">Cancel</button></div></div>';
+  const sar=a._sar?sarPanel(a):"";
+  return '<div class="dr-sec"><div class="lbl">Disposition</div>'+note+'<div class="actions" id="actionRow">'+btns+'</div>'+reason+sar+'</div>';
+}
+function sarPanel(a){return '<div class="sar"><div class="sar-head"><span class="t">Suspicious Activity Report &middot; draft narrative</span>'+(a._sarFiled?'<span class="filenote">FILED</span>':'')+'</div><div class="sar-body" id="sarBody">'+esc(a._sar)+'</div><div class="sar-foot"><button class="copybtn" data-act="copySar">Copy narrative</button>'+(a._sarFiled?'':'<button class="btn btn-danger" data-act="fileSar" style="padding:5px 12px;font-size:12px">Mark as filed</button>')+'</div></div>';}
+function wireDisposition(a){
+  const row=document.getElementById("actionRow");if(!row)return;
+  document.querySelectorAll("#view-overview [data-act], .dr-body [data-act]").forEach(()=>{});
+  document.querySelectorAll(".dr-body [data-act]").forEach(function(btn){btn.onclick=function(){const act=btn.dataset.act;
+    if(act==="escalate"){a.status="Escalated";refreshAll(a);}
+    else if(act==="clear"){document.getElementById("reasonWrap").style.display="block";row.style.display="none";}
+    else if(act==="cancelClear"){document.getElementById("reasonWrap").style.display="none";row.style.display="flex";}
+    else if(act==="confirmClear"){const v=document.getElementById("reasonSel").value;if(!v){document.getElementById("reasonSel").style.borderColor="var(--critical)";return;}a.status="Cleared (false positive)";a._clearReason=v;refreshAll(a);}
+    else if(act==="reopen"){a.status="Open";a._sarFiled=false;refreshAll(a);}
+    else if(act==="sar"){a._sar=sarNarrative(a);renderDrawer(a);}
+    else if(act==="fileSar"){a._sarFiled=true;a.status="SAR filed";refreshAll(a);}
+    else if(act==="copySar"){navigator.clipboard&&navigator.clipboard.writeText(a._sar);btn.textContent="Copied";setTimeout(()=>btn.textContent="Copy narrative",1400);}
+  };});
+}
+function refreshAll(a){renderDrawer(a);updateNavCount();if(state.view==="overview")renderOverview();if(state.view==="alerts")drawRows();if(state.view==="customers")renderCustomers();}
+function buildDrawerChart(a,tt){
+  const cw=document.getElementById("drChart");if(!cw)return;const sc=sevColor(a.severity);
+  if(a.ruleId==="R1"||a.ruleId==="R2"||a.ruleId==="R3"){
+    makeChart("drChart",{type:"bar",data:{labels:tt.map(t=>dayShort(t.day)),datasets:[{data:tt.map(t=>t.amount),backgroundColor:sc,borderRadius:3}]},options:{plugins:{legend:{display:false},refLine:{value:10000,label:"CTR threshold $10,000",color:COL.critical},tooltip:{callbacks:{label:c=>money(c.parsed.y)}}},scales:{x:{grid:{display:false},ticks:{font:{size:9.5},maxRotation:0,autoSkip:true,maxTicksLimit:8}},y:{grid:{color:COL.line},suggestedMax:10600,ticks:{callback:v=>fmtBig(v),font:{size:10}}}}}});
+  }else if(a.ruleId==="R4"){
+    makeChart("drChart",{type:"bar",data:{labels:tt.map((t,i)=>dayShort(t.day)+(t.direction==="credit"?" in":" out")),datasets:[{data:tt.map(t=>t.amount),backgroundColor:tt.map(t=>t.direction==="credit"?COL.low:COL.high),borderRadius:3}]},options:{plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>money(c.parsed.y)}},subtitle:{display:true,text:"Green = funds in, orange = funds out",color:COL.ink3,font:{size:10}}},scales:{x:{grid:{display:false},ticks:{font:{size:9},maxRotation:40}},y:{grid:{color:COL.line},ticks:{callback:v=>fmtBig(v),font:{size:10}}}}}});
+  }else if(a.ruleId==="R5"){
+    const daily=Array.from({length:WINDOW_DAYS+1},(_,d)=>round2(sum(byAccount[a.accountId].filter(t=>t.day===d))));
+    const burst=new Set(tt.map(t=>t.day));
+    makeChart("drChart",{type:"bar",data:{labels:daily.map((_,d)=>d),datasets:[{data:daily,backgroundColor:daily.map((_,d)=>burst.has(d)?COL.critical:COL.accent),barPercentage:1,categoryPercentage:1}]},options:{plugins:{legend:{display:false},tooltip:{callbacks:{title:c=>dayShort(+c[0].label),label:c=>money(c.parsed.y)}},subtitle:{display:true,text:"Daily volume: extended gap then sudden burst (red)",color:COL.ink3,font:{size:10}}},scales:{x:{grid:{display:false},title:{display:true,text:"Day in monitoring period",color:COL.ink3,font:{size:9}},ticks:{autoSkip:true,maxTicksLimit:7,font:{size:9}}},y:{grid:{color:COL.line},ticks:{callback:v=>fmtBig(v),font:{size:10}}}}}});
+  }else if(a.ruleId==="R6"){
+    const wkExp=custByAccount(a.accountId).expectedMonthly/4;const weeks=13;const wv=Array.from({length:weeks},(_,w)=>round2(sum(byAccount[a.accountId].filter(t=>t.day>=w*7&&t.day<w*7+7))));const mx=Math.max.apply(null,wv);
+    makeChart("drChart",{type:"bar",data:{labels:wv.map((_,i)=>"W"+(i+1)),datasets:[{data:wv,backgroundColor:wv.map(v=>v===mx?COL.high:COL.accent),borderRadius:3}]},options:{plugins:{legend:{display:false},refLine:{value:wkExp,label:"Expected weekly",color:COL.medium},tooltip:{callbacks:{label:c=>money(c.parsed.y)}}},scales:{x:{grid:{display:false},ticks:{font:{size:9}}},y:{grid:{color:COL.line},ticks:{callback:v=>fmtBig(v),font:{size:10}}}}}});
+  }else if(a.ruleId==="R7"){
+    makeChart("drChart",{type:"bar",data:{labels:tt.map(t=>dayShort(t.day)),datasets:[{data:tt.map(t=>t.amount),backgroundColor:tt.map(t=>FATF_CALL.indexOf(t.counterpartyCountry)>=0?COL.critical:COL.high),borderRadius:3}]},options:{plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>money(c.parsed.y)+" \u00b7 "+tt[c.dataIndex].counterpartyCountry}},subtitle:{display:true,text:"Red = FATF call for action, orange = increased monitoring",color:COL.ink3,font:{size:10}}},scales:{x:{grid:{display:false},ticks:{font:{size:9.5},maxRotation:0,autoSkip:true}},y:{grid:{color:COL.line},ticks:{callback:v=>fmtBig(v),font:{size:10}}}}}});
+  }else{
+    makeChart("drChart",{type:"bar",data:{labels:tt.map(t=>dayShort(t.day)),datasets:[{data:tt.map(t=>t.amount),backgroundColor:sc,borderRadius:3}]},options:{plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>money(c.parsed.y)}}},scales:{x:{grid:{display:false}},y:{grid:{color:COL.line},ticks:{callback:v=>fmtBig(v)}}}}});
+  }
+}
+function updateNavCount(){const n=alerts.filter(a=>["Open","Under review","Escalated"].indexOf(a.status)>=0).length;document.getElementById("navAlertCount").textContent=n;}
+
+/* ---------- wiring ---------- */
+document.getElementById("nav").addEventListener("click",e=>{const b=e.target.closest("button");if(b)setView(b.dataset.view);});
+document.getElementById("menuBtn").onclick=openMenu;
+document.getElementById("navScrim").onclick=closeMenu;
+document.getElementById("scrim").onclick=closeDrawer;
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeDrawer();});
+document.addEventListener("click",function(e){
+  const ar=e.target.closest("[data-alert]");if(ar){openDrawer(ar.dataset.alert);return;}
+  const cr=e.target.closest("[data-cust]");if(cr){state.f={sev:"All",status:"All",ty:"All",q:cr.dataset.cust};setView("alerts");return;}
+  const sh=e.target.closest("th[data-sort]");if(sh&&state.view==="alerts"){const k=sh.dataset.sort;if(state.sort.key===k)state.sort.dir=state.sort.dir==="asc"?"desc":"asc";else{state.sort.key=k;state.sort.dir=(k==="customerName"||k==="id")?"asc":"desc";}renderAlerts();return;}
+});
+
+updateNavCount();
+renderOverview();
+</script>
+</body>
+</html>
